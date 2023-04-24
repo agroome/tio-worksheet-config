@@ -8,11 +8,11 @@ def cli():
 
 @cli.command()
 @click.argument('sheet_name')
-@click.argument('filename', type=click.Path(exists=True))
-def load(filename, sheet_name):
+@click.option('-c', '--config', type=click.Path(exists=True))
+def load(sheet_name, config):
     '''load a single sheet from an excel file'''
-    click.echo(f"loading {sheet_name} from {filename}")
-    sheets = workbook.WorkSheets(filename)
+    click.echo(f"loading {sheet_name} from {config}")
+    sheets = workbook.WorkSheets(config)
     try:
         sheets.execute(sheet_name)
     except workbook.SheetNotFound as e:
@@ -20,10 +20,10 @@ def load(filename, sheet_name):
 
 
 @cli.command()
-@click.argument('filename', type=click.Path(exists=True))
-def load_all(filename):
+@click.option('-c', '--config', type=click.Path(exists=True))
+def load_all(config):
     '''load all sheets from excel file'''
-    sheets = workbook.Worksheets(filename)
+    sheets = workbook.Worksheets(config)
     for sheet_name in sheets.work_sheets:
         try:
             sheets.execute(sheet_name)
