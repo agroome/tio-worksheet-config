@@ -6,7 +6,7 @@ DEFAULT_CONFIG = './tio-config.xlsx'
 
 @click.group()
 def cli():
-    '''entry point for CLI'''
+    '''Configure Tenable.io instance based on worksheet data'''
 
 @cli.command()
 @click.argument('sheet_name')
