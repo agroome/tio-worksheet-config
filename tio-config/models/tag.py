@@ -4,50 +4,100 @@ import textwrap
 
 from models.base_model import CustomBase
 from pydantic import Field, Extra, root_validator
-from typing import Any, Dict, List, ClassVar
+from typing import Any, Dict, List, ClassVar, Optional, Tuple
 from tenable.io import TenableIO
+from dotenv import load_dotenv
 
 tag_column_regex = re.compile('(?P<name>\w+)_(?P<operator>\w+)')
 
 
 class InvalidTagColumn(Exception):
-    '''tag item name must be in filters returned by tio.filters.asset_tags()'''
+    '''column name must be in filters list by tio.filters.asset_tags()'''
 
 
 class InvalidTagFilter(Exception):
     '''tag item name must be in filters returned by tio.filters.asset_tags()'''
 
 
+# class TagFilterItem(CustomBase):
+#     property: str
+#     operator: Optional[str] = 'eq'
+#     value: Optional[str]
+
+
+_tag_filters = None
+def filter_definitions(tio):
+    '''retrive on first use and cache in module'''
+    global _tag_filters
+    load_dotenv()
+    tio = TenableIO()
+    if _tag_filters is None:
+       _tag_filters  = tio.filters.asset_tag_filters()
+    return _tag_filters
+
+
+
+
+
+def parse_filter_name(value: str) -> Tuple[dict, str]:
+    '''split value into (filter_name, operator)'''
+
+    # could convert this to a model...
+    global _tio_filters_asset_tags
+    
+    # default to equal when the value is a filter_name with out the operator
+    operator = 'eq'
+    filter_name = value
+    
+    tag_filter = filter_definitions(value)
+    
+    if tag_filter is None:
+        # see if there is an operator appended to the filter_name
+        match = re.match('(?P<filter_name>\w+)[ _](?P<operator>\w+)', value)
+        if match is None:
+            raise ValueError(f'[{value}]: bad format')
+            
+        filter_name, operator = match.groups()
+        
+        tag_filter = _tio_filters_asset_tags.get(filter_name)
+        if tag_filter is None:
+            raise KeyError(f'[{filter_name}]: filter name not found')
+    
+        if operator not in tag_filter['operators']:
+            raise KeyError(f'[{operator}]: not in {tag_filter["operators"]}')
+
+    return filter_name, operator
+        
+
+
+
 class Tag(CustomBase, extra=Extra.allow):
     category: str = Field(include=True, alias='tag_category')
     value: str = Field(include=True, alias='tag_value')
-    filters: List = Field(include=True)
     filter_type: str = Field(include=True, default='and')
+    filters: List = Field(include=True, default_factory=list)
         
     @root_validator(pre=True)
     def build_filters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         '''Build the filter statement based on "extra fields" in values'''
 
-        def strip_lines(value):
-            # remove outer whitespace and newlines
-            value = re.sub('\n+', ',', value.strip())
-            # remove spaces around commas
-            return re.sub('[ ]*,[ ]*', ',', value)
+        '''
+        This function is run before field validation. Load self.filters using the input columns
+        that are NOT part of the class variables above.
+        '''
 
-        # identify required_fields so we can skip these in the loop below
-        required_field_names = {field.alias for field in cls.__fields__.values() if field.alias != 'extra'}
-                
+        # fields defined in the class definition (or their alias)
+        required_field_names = [field.alias for field in cls.__fields__.values()]
+        # filter_values are all values execept required_field_names
+        filter_values = {k: v for k, v in values.items() if k not in required_field_names}
+
         filters = []
-        for field_name, field_value in values.items():
-            if field_name not in required_field_names:
-                # parse col header to identify filter_name and operator, i.e. ipv4_eq
-                match = re.match('(?P<filter_name>\w+)_(?P<operator>\w+)', field_name.lower())
-                if match is None:
-                    raise InvalidTagColumn(f'[{field_name}]: expecting <filter_name>_<operator>')
-    
-                filter_name, operator = match.groups()                    
-                field_value = strip_lines(field_value)
-                filters.append((filter_name, operator, field_value))
+        for field_name, field_value in filter_values.items():
+            filter_name, operator = parse_filter_name(field_name)
+            if field_value is None:
+                continue
+
+            filters.append((filter_name, operator, field_value))
                 
         values['filters'] = filters
         return values
