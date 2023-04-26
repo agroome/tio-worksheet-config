@@ -74,10 +74,12 @@ class WorkSheets:
 
 
 # cleanup function for testing
-def del_users():
+def del_users(contains='+', dry_run=False):
     load_dotenv()
     tio = TenableIO()
     for user in tio.users.list():
-        if '+test' in user['username']:
+        if contains in user['username']:
             print(f"deleting: {user['username']}")
-            tio.users.delete(user['id'])
+            if not dry_run:
+                tio.users.delete(user['id'])
+
