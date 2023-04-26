@@ -8,6 +8,7 @@ from models.user import User
 from models.exclusion import Exclusion
 from models.agent_group import AgentGroup
 from models.network import Network
+from models.scanner_group import ScannerGroup
 
 
 class SheetNotFound(Exception):
@@ -18,6 +19,7 @@ model_classes = {
     'agent_groups': AgentGroup,
     'exclusions': Exclusion,
     'networks': Network,
+    'scanner_groups': ScannerGroup,
     'tags': Tag,
     'users': User
 }
@@ -79,11 +81,3 @@ def del_users():
         if '+test' in user['username']:
             print(f"deleting: {user['username']}")
             tio.users.delete(user['id'])
-
-# def main():
-    # execute('users')
-    # execute('exclusions')
-
-
-# if __name__ == '__main__':
-    # main()
