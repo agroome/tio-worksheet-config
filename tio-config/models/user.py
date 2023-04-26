@@ -1,10 +1,24 @@
+import string
+import random
 import textwrap
 
 from models.base_model import CustomBase
 from typing import ClassVar, Optional
 from pydantic import Field, validator
 
-from models.generate_password import generate_password
+PASSWORD_LENGTH = 20
+
+def generate_password(length=PASSWORD_LENGTH):
+    special_chars = '`~!@#$%^&*()-_+='
+    password_chars = string.digits + string.ascii_letters + special_chars
+    return "".join(random.choices(password_chars, k=length))
+
+
+tio_users = None
+def init_tio_users(tio):
+    global tio_users
+    if tio_users is None:
+        tio_users = {user['username']: user for user in tio.users.list()}
 
 class User(CustomBase):
     username: str
