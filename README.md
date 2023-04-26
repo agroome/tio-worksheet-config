@@ -2,7 +2,23 @@
 
 Configure Tenable.io from excel worksheet data
 
-This is alpha code and currently not supported.
+This is alpha code and currently not supported, and subject to change. Not tested on Windows 
+
+## Quick Install on Linux, OSX
+```
+You can install the CLI on OS/X or Unix with the following commands:
+
+$ mkdir tio-worksheet-config
+$ cd tio-worksheet-config
+$ curl -s https://raw.githubusercontent.com/agroome/tio-worksheet-config/main/install.sh | bash
+
+This will create a virtual environment and install the package in the created folder.
+
+You must activate the virtual environment before running the commands.
+
+$ source ./venv/bin/activate
+(venv)$ tio-config —help
+```
 
 ## Install on Unix
 
