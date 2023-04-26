@@ -6,7 +6,8 @@ setup(
     package_dir={"": "tio-config"},
 
     install_requires=[
-        'Click',
+        'Click', 
+        'click_pathlib'
         'pyTenable',
         'python-dotenv',
         'pandas', 
