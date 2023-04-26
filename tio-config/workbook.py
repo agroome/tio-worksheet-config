@@ -35,7 +35,11 @@ class WorkSheets:
             load_dotenv()
             self._session = TenableIO()
 
-    def build_commands(self, sheet_name: str):
+    @property
+    def sheets(self):
+        return list(self._work_sheets)
+
+    def _load_sheet(self, sheet_name: str):
         df = self._work_sheets.get(sheet_name)
         if df is None:
             raise SheetNotFound(f"'{sheet_name}' not found in {self._file_path}")
@@ -52,14 +56,14 @@ class WorkSheets:
             return [cls(**record) for record in data]
 
     def execute(self, sheet_name: str):
-        commands = self.build_commands(sheet_name)
+        commands = self._load_sheet(sheet_name)
         print(f'executing sheet: {sheet_name}')
         for command in commands:
             print(command.describe)
             command.execute(self._session)
 
     def get_records(self, sheet_name: str):
-        commands = self.build_commands(sheet_name)
+        commands = self._load_sheet(sheet_name)
         return [command.dict() for command in commands]
 
 
