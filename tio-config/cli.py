@@ -61,16 +61,12 @@ def keys(keyfile: pathlib.Path):
 
 
 @cli.command()
-@click.argument('resource')
-@click.option('-f', '--fmt', type=str, help='python format string for output')
-def filters(resource, fmt):
-    click.echo(f'listing {resource} fmt="{fmt}"')
-    try:
-        api_method = getattr(tio.filters, resource)
-        print(f'api: {api_method}')
-    except TypeError:
-        click.BadParameter(f'[tio.filters.{resource}]: pyTenable api binding not found')
-    records = api_method()
+# @click.argument('resource')
+# @click.option('-f', '--fmt', type=str, help='python format string for output')
+def tag_filters():
+    '''dump asset tag filter names and supported operators'''
+    
+    records = tio.filters.asset_tag_filters()
     pprint(records)
 
     
