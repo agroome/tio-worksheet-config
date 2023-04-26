@@ -15,10 +15,11 @@ class SheetNotFound(Exception):
 
 
 model_classes = {
-    'users': User,
+    'agent_groups': AgentGroup,
     'exclusions': Exclusion,
+    'networks': Network,
     'tags': Tag,
-    'agent_groups': AgentGroup
+    'users': User
 }
 
 
