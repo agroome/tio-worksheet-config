@@ -51,11 +51,13 @@ class WorkSheets:
         # clean DataFrame and convert to list of dicts
         data = df.replace(np.nan, None).to_dict('records')
         
+        # select data model based on the name of the sheet
+        #  - expecting either a defined sheet name or starting/ending with 'tags'
         cls = model_classes.get(sheet_name)
-        if cls is None and sheet_name.startswith('tags_') or sheet_name.endswith('_tags'):
+        if cls is None and sheet_name.startswith('tags') or sheet_name.endswith('tags'):
             cls = model_classes.get('tags')
 
-        # convert to data model if it exists
+        # convert to data model 
         if cls is not None:
             return [cls(**record) for record in data]
 
@@ -69,8 +71,6 @@ class WorkSheets:
     def get_records(self, sheet_name: str):
         commands = self._load_sheet(sheet_name)
         return [command.dict() for command in commands]
-
-
 
 
 # cleanup function for testing
