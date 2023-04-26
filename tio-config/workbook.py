@@ -7,6 +7,7 @@ from models.tag import Tag
 from models.user import User
 from models.exclusion import Exclusion
 from models.agent_group import AgentGroup
+from models.network import Network
 
 
 class SheetNotFound(Exception):
