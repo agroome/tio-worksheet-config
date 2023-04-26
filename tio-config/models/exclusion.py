@@ -8,8 +8,8 @@ class Exclusion(CustomBase):
     enabled: Optional[bool]
     frequency: Optional[str]
     day_of_month: Optional[str]
-    start_time: datetime
-    end_time: datetime
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
 
     def execute(self, tio):
         try:    
