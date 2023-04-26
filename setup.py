@@ -7,7 +7,7 @@ setup(
 
     install_requires=[
         'Click', 
-        'click_pathlib'
+        'click_pathlib',
         'pyTenable',
         'python-dotenv',
         'pandas', 
