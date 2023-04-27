@@ -18,7 +18,7 @@ class CustomBase(BaseModel, extra=Extra.allow, anystr_strip_whitespace=True):
         def strip_lines(value):
             # replace newlines and remove spaces around commas
             if isinstance(value, str):
-                value = re.sub('\n+', ',', value)
+                value = re.sub('\n+', ',', value.strip())
                 value = re.sub('[ ]*,[ ]*', ',', value)
             return value
 

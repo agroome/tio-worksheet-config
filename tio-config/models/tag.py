@@ -2,11 +2,14 @@
 import re
 import textwrap
 
-from models.base_model import CustomBase
 from pydantic import Field, Extra, root_validator
 from typing import Any, Dict, List, ClassVar, Optional, Tuple
 from tenable.io import TenableIO
 from dotenv import load_dotenv
+
+from models.base_model import CustomBase
+# from commands.cache import get_cached_tag_filters, get_cached_users
+
 
 tag_column_regex = re.compile('(?P<name>\w+)_(?P<operator>\w+)')
 
@@ -26,7 +29,7 @@ class InvalidTagFilter(Exception):
 
 
 _tag_filters = None
-def filter_definitions(tio):
+def filter_definitions():
     '''retrive on first use and cache in module'''
     global _tag_filters
     load_dotenv()
@@ -34,8 +37,6 @@ def filter_definitions(tio):
     if _tag_filters is None:
        _tag_filters  = tio.filters.asset_tag_filters()
     return _tag_filters
-
-
 
 
 
@@ -49,8 +50,9 @@ def parse_filter_name(value: str) -> Tuple[dict, str]:
     operator = 'eq'
     filter_name = value
     
-    tag_filter = filter_definitions(value)
-    
+    tag_filters = filter_definitions()
+    tag_filter = tag_filters.get(value)
+
     if tag_filter is None:
         # see if there is an operator appended to the filter_name
         match = re.match('(?P<filter_name>\w+)[ _](?P<operator>\w+)', value)
@@ -58,8 +60,8 @@ def parse_filter_name(value: str) -> Tuple[dict, str]:
             raise ValueError(f'[{value}]: bad format')
             
         filter_name, operator = match.groups()
-        
-        tag_filter = _tio_filters_asset_tags.get(filter_name)
+        tag_filter = tag_filters.get(filter_name)
+
         if tag_filter is None:
             raise KeyError(f'[{filter_name}]: filter name not found')
     
@@ -97,9 +99,13 @@ class Tag(CustomBase, extra=Extra.allow):
             if field_value is None:
                 continue
 
+            field_value = re.sub('\n+', ',', field_value.strip())
+            field_value = re.sub('[ ]*,[ ]*', ',', field_value)
+
             filters.append((filter_name, operator, field_value))
                 
         values['filters'] = filters
+
         return values
 
     @property
