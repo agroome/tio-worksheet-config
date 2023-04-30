@@ -11,6 +11,8 @@ from models.agent_group import AgentGroup
 from models.network import Network
 from models.scanner_group import ScannerGroup
 
+from processors import expand_users_with_groups
+
 
 class SheetNotFound(Exception):
     '''Raised when requested sheet is not in the workbook.'''
@@ -60,6 +62,9 @@ class Excel:
 
     def get_objs(self, sheet_name: str, action=None):
         objs = self.work_sheets[sheet_name].records
+        # if sheet_name == 'users':
+        #     objs = [obj for obj in expand_users_with_groups(objs)]
+
         if action is not None:
             for obj in objs:
                 obj.action = action
