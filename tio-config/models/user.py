@@ -3,10 +3,14 @@ import random
 import textwrap
 
 from models.base_model import CustomBase
-from typing import ClassVar, Optional
+from collections import defaultdict
+from typing import ClassVar, List, Optional
 from pydantic import Field, validator
+from session import get_cached
 
 PASSWORD_LENGTH = 20
+
+# tio_users = {'user': u for u in get_cached('users')}
 
 def generate_password(length=PASSWORD_LENGTH):
     special_chars = '`~!@#$%^&*()-_+='
@@ -14,27 +18,42 @@ def generate_password(length=PASSWORD_LENGTH):
     return "".join(random.choices(password_chars, k=length))
 
 
-tio_users = None
-def init_tio_users(tio):
-    global tio_users
-    if tio_users is None:
-        tio_users = {user['username']: user for user in tio.users.list()}
+class Group(CustomBase):
+    name: str
+    api_name: ClassVar = 'groups'
+
+    @property
+    def id(self) -> int:
+        groups = get_cached('groups')
+        group = groups.get(self.name)
+        return group['id']
+
 
 class User(CustomBase):
     username: str
     name: Optional[str]
     email: Optional[str]
     permissions: Optional[int] = 64
-    groups: Optional[list[str]] = None
+    groups: List[Group] = None
     password: Optional[str] = Field(default=generate_password(), repr=False)
-    tio_groups: ClassVar = None
+    api_name: ClassVar = 'users'
 
     @validator('groups', pre=True)
     def split_string(cls, value):
         if isinstance(value, str):
-            value = [v.strip() for v in value.split(',')]
+            value = [dict(name=group_name) for group_name in value.split(',')]
+        elif isinstance(value, list):
+            value = [dict(name=group_name) for group_name in value]
         return value
     
+    @property
+    def id(self):
+        tio_users = get_cached('users')
+        user = tio_users.get(self.username)
+        if user is None:
+            raise IndexError(f'[{self.username}]: not found')
+        return user['id']
+
     @property
     def describe(self):
         text = f'''
@@ -48,33 +67,44 @@ class User(CustomBase):
         '''
         return textwrap.dedent(text)
         
-    def execute(self, tio):
-        try:
-            # load tio groups once as a class variable
-            if User.tio_groups is None:
-                User.tio_groups = {group['name']: group for group in tio.groups.list()}
-        except Exception as e:
-            print(f'error: {e.args}')
 
-        try:
-            values = self.dict(exclude={'groups'})
-            user = tio.users.create(**values)
-            if self.group is not None:
-                for group_name in self.group.replace(' ', '').split(','):
-                    try: 
-                        # get group from known groups or create group
-                        group = User.tio_groups.get(group_name)
-                        if group is None:
-                            print(f"creating: Group(name='{group_name}')")
-                            group = tio.groups.create(group_name)
-                            # update known groups
-                            User.tio_groups[group_name] = group
+def process_users(objects, action='create'):
+    tio_groups = get_cached('groups')
+    
+    users = list(objects) # consider records may be a generator
+    membership = defaultdict(list)
+    group_index = {}
 
-                        print(f'adding {user["username"]} to {group_name}')
-                        tio.groups.add_user(group['id'], user['id'])
+    if action == 'create':
+        for user in users: 
+            print(f'{action.upper}: {user.username}')
+            user.action = action
+            for group in user.groups:
+                group_index[group.name] = group
+                membership[group.name].append(user)
+            yield user
 
-                    except Exception as e:
-                        print(f'error: {e.args}')
+        # commands to add groups 
+        for group_name, group in group_index.items():
+            if group_name not in tio_groups:
+                if action == 'create':
+                    group.action = action
+                    yield group
 
-        except Exception as e:
-            pass
+        # commands to modify group membership
+        for group_name, members in membership.items():
+            usernames = sorted([u.username for u in members])
+            group = group_index[group_name]
+            group.action = 'add_user'
+            for member in members:
+                yield group
+    
+    elif action == 'delete':
+        for user in users: 
+            print(f'{action.upper}: {user.username}')
+            user.action = action
+            try:
+                user.id = tio_users[user.username]['id']
+                yield user
+            except IndexError as e:
+                print(f"warning '{user.username}: trying to delete user that doesn't exist")

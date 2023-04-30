@@ -2,7 +2,9 @@
 import click
 import click_pathlib
 import pathlib
+
 import workbook
+import session
 
 from tenable.io import TenableIO
 from dotenv import load_dotenv
@@ -12,7 +14,8 @@ DEFAULT_CONFIG = './tio-config.xlsx'
 DEFAULT_ENV = './.env'
 
 load_dotenv()
-tio: TenableIO = TenableIO()
+tio = TenableIO()
+session.init(tio)
 
 @click.group()
 def cli():
@@ -25,9 +28,10 @@ def load(sheet_name, config):
     '''load a single sheet from an excel file'''
 
     click.echo(f"loading {sheet_name} from {config}")
-    sheets = workbook.WorkSheets(config)
+    ws = workbook.WorkSheets(config)
+    
     try:
-        sheets.execute(sheet_name)
+        objs = ws.get_objs('users', 'create')
     except workbook.SheetNotFound as e:
         print(repr(e))
 
@@ -68,8 +72,22 @@ def tag_filters():
     
     records = tio.filters.asset_tag_filters()
     pprint(records)
+    
+    
+def test_workbook(sheet, filename='tio-config.xlsx'):
+    wb = workbook.WorkSheets(filename)
+    records = wb.get_records(sheet)
+    for record in records:
+        print(record)
 
-    
-    
+
 if __name__ == '__main__':
-    cli()
+    from session import init_session
+    init_session(tio)
+    test_workbook('tags_ipv4')
+    test_workbook('users')
+
+    # wb = workbook.WorkSheets('tio-config.xlsx')
+    # print(wb.get_records('users'))
+    # cli()
+

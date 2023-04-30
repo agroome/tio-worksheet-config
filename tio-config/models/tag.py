@@ -7,6 +7,8 @@ from typing import Any, Dict, List, ClassVar, Optional, Tuple
 from tenable.io import TenableIO
 from dotenv import load_dotenv
 
+from session import session, get_cached
+
 from models.base_model import CustomBase
 # from commands.cache import get_cached_tag_filters, get_cached_users
 
@@ -22,35 +24,14 @@ class InvalidTagFilter(Exception):
     '''tag item name must be in filters returned by tio.filters.asset_tags()'''
 
 
-# class TagFilterItem(CustomBase):
-#     property: str
-#     operator: Optional[str] = 'eq'
-#     value: Optional[str]
-
-
-_tag_filters = None
-def filter_definitions():
-    '''retrive on first use and cache in module'''
-    global _tag_filters
-    load_dotenv()
-    tio = TenableIO()
-    if _tag_filters is None:
-       _tag_filters  = tio.filters.asset_tag_filters()
-    return _tag_filters
-
-
-
 def parse_filter_name(value: str) -> Tuple[dict, str]:
     '''split value into (filter_name, operator)'''
 
-    # could convert this to a model...
-    global _tio_filters_asset_tags
-    
     # default to equal when the value is a filter_name with out the operator
     operator = 'eq'
     filter_name = value
     
-    tag_filters = filter_definitions()
+    tag_filters = get_cached('asset_tag_filters')
     tag_filter = tag_filters.get(value)
 
     if tag_filter is None:
@@ -81,12 +62,7 @@ class Tag(CustomBase, extra=Extra.allow):
         
     @root_validator(pre=True)
     def build_filters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        '''Build the filter statement based on "extra fields" in values'''
-
-        '''
-        This function is run before field validation. Load self.filters using the input columns
-        that are NOT part of the class variables above.
-        '''
+        '''Build the filter statement based on multiple columns.'''
 
         # fields defined in the class definition (or their alias)
         required_field_names = [field.alias for field in cls.__fields__.values()]
