@@ -38,6 +38,13 @@ class User(CustomBase):
     password: Optional[str] = Field(default=generate_password(), repr=False)
     api_name: ClassVar = 'users'
 
+    @validator('username')
+    def to_lower(cls, value):
+        if isinstance(value, str):
+            value = value.lower()
+        return value
+
+
     @validator('groups', pre=True)
     def split_string(cls, value):
         if isinstance(value, str):
@@ -99,12 +106,3 @@ def process_users(objects, action='create'):
             for member in members:
                 yield group
     
-    elif action == 'delete':
-        for user in users: 
-            print(f'{action.upper}: {user.username}')
-            user.action = action
-            try:
-                user.id = tio_users[user.username]['id']
-                yield user
-            except IndexError as e:
-                print(f"warning '{user.username}: trying to delete user that doesn't exist")
