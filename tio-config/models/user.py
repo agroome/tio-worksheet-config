@@ -6,7 +6,7 @@ from models.base_model import CustomBase
 from collections import defaultdict
 from typing import ClassVar, List, Optional
 from pydantic import Field, validator
-from session import get_cached
+from session import bind_api, get_cached
 
 PASSWORD_LENGTH = 20
 
@@ -18,24 +18,14 @@ def generate_password(length=PASSWORD_LENGTH):
     return "".join(random.choices(password_chars, k=length))
 
 
-class Group(CustomBase):
-    name: str
-    api_name: ClassVar = 'groups'
-
-    @property
-    def id(self) -> int:
-        groups = get_cached('groups')
-        group = groups.get(self.name)
-        return group['id']
-
-
+@bind_api('users')
 class User(CustomBase):
     username: str
     name: Optional[str]
     email: Optional[str]
     permissions: Optional[int] = 64
-    groups: List[Group] = None
-    password: Optional[str] = Field(default=generate_password(), repr=False)
+    groups: List[str] = None
+    password: Optional[str] = Field(default_factory=generate_password, repr=False)
     api_name: ClassVar = 'users'
 
     @validator('username')
@@ -48,9 +38,11 @@ class User(CustomBase):
     @validator('groups', pre=True)
     def split_string(cls, value):
         if isinstance(value, str):
-            value = [dict(name=group_name) for group_name in value.split(',')]
-        elif isinstance(value, list):
-            value = [dict(name=group_name) for group_name in value]
+            # value = [Group(name=group_name) for group_name in value.split(',')]
+            value = [group_name.strip() for group_name in value.split(',')]
+        # elif isinstance(value, list):
+            # value = [Group(name=group_name) for group_name in value]
+            # value = [Group(name=group_name) for group_name in value]
         return value
     
     @property

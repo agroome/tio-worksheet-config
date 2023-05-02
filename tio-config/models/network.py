@@ -2,7 +2,9 @@
 from pydantic import Extra, Field, validator
 from typing import Optional
 from models.base_model import CustomBase
+from session import bind_api
 
+@bind_api('networks')
 class Network(CustomBase, extra=Extra.allow):
     name: str = Field(alias='network_name')
     description: Optional[str]

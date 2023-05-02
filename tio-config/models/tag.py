@@ -7,7 +7,7 @@ from typing import Any, Dict, List, ClassVar, Optional, Tuple
 from tenable.io import TenableIO
 from dotenv import load_dotenv
 
-from session import session, get_cached
+from session import bind_api, get_cached
 
 from models.base_model import CustomBase
 # from commands.cache import get_cached_tag_filters, get_cached_users
@@ -24,36 +24,7 @@ class InvalidTagFilter(Exception):
     '''tag item name must be in filters returned by tio.filters.asset_tags()'''
 
 
-def parse_filter_name(value: str) -> Tuple[dict, str]:
-    '''split value into (filter_name, operator)'''
-
-    # default to equal when the value is a filter_name with out the operator
-    operator = 'eq'
-    filter_name = value
-    
-    tag_filters = get_cached('asset_tag_filters')
-    tag_filter = tag_filters.get(value)
-
-    if tag_filter is None:
-        # see if there is an operator appended to the filter_name
-        match = re.match('(?P<filter_name>\w+)[ _](?P<operator>\w+)', value)
-        if match is None:
-            raise ValueError(f'[{value}]: bad format')
-            
-        filter_name, operator = match.groups()
-        tag_filter = tag_filters.get(filter_name)
-
-        if tag_filter is None:
-            raise KeyError(f'[{filter_name}]: filter name not found')
-    
-        if operator not in tag_filter['operators']:
-            raise KeyError(f'[{operator}]: not in {tag_filter["operators"]}')
-
-    return filter_name, operator
-        
-
-
-
+@bind_api('tags')
 class Tag(CustomBase, extra=Extra.allow):
     category: str = Field(include=True, alias='tag_category')
     value: str = Field(include=True, alias='tag_value')
@@ -104,3 +75,37 @@ class Tag(CustomBase, extra=Extra.allow):
             tio.tags.create(**self.dict())
         except Exception as e:
             print(f'warning: {str(e)}')
+def parse_filter_name(column_name: str) -> Tuple[dict, str]:
+    '''split value into (filter_name, operator)
+    
+    The filter column headers will be either:
+        - the name of a filter, i.e. ipv4
+        - OR the <name><' ' or '_'><operator
+    
+    '''
+
+    # default to equal when the value is a filter_name with out the operator
+    operator = 'eq'
+    filter_name = column_name
+    
+    # get the dictionary of valid filter names and operators
+    tag_filters = get_cached('asset_tag_filters')
+    tag_filter = tag_filters.get(column_name)
+
+    if tag_filter is None:
+        # see if there is an operator appended to the filter_name
+        match = re.match('(?P<filter_name>\w+)[ _](?P<operator>\w+)', column_name)
+        if match is None:
+            raise ValueError(f'[{column_name}]: bad format')
+            
+        filter_name, operator = match.groups()
+        tag_filter = tag_filters.get(filter_name)
+
+        if tag_filter is None:
+            raise KeyError(f'[{filter_name}]: filter name not found')
+    
+        if operator not in tag_filter['operators']:
+            raise KeyError(f'[{operator}]: not in {tag_filter["operators"]}')
+
+    return filter_name, operator
+        

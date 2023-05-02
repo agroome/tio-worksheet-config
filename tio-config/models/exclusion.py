@@ -1,7 +1,9 @@
 from models.base_model import CustomBase
 from typing import Optional
 from datetime import datetime
+from session import bind_api
 
+@bind_api('exclusions')
 class Exclusion(CustomBase):
     exclusion_name: str 
     exclusion_ipv4: str 

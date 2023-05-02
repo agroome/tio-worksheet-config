@@ -2,7 +2,9 @@ from models.base_model import CustomBase
 from pydantic import Field, Extra
 from tenable.io import TenableIO
 
+from session import bind_api
 
+@bind_api('agent_groups')
 class AgentGroup(CustomBase):
     name: str = Field(alias='group_name')
 
