@@ -127,15 +127,16 @@ def process_groups_from_users(records):
             
         # build group commands and membership index
         for group_name in user['record']['groups'].split(','):
-            group_cmd = {
-                'api_name': 'groups',
-                'action': 'create',
-                'record': {
-                    'name': group_name
-                }
-            }  
             membership[group_name].append(user['record']['username'])
-            group_commands.append(group_cmd)
+        
+    # build group 'create'
+    for group_name in membership:
+        group_cmd = {
+            'api_name': 'groups', 
+            'action': 'create', 
+            'record': {'name': group_name}
+        }  
+        group_commands.append(group_cmd)
     
     # build group 'add_user' from membership info
     for group_name, members in membership.items():
@@ -204,8 +205,8 @@ def post_process_sheets(sheets: dict[str,list], asset_tag_filters: dict = None, 
 
 
 def main():
-    ws = Excel('tio-config.xlsx')
-    _records = ws.get_records(encapsulate=False)
+    ws = Excel('tio-config.xlsx', sheet_names='users')
+    _records = ws.get_records()
 
 if __name__ == '__main__':
     main()
